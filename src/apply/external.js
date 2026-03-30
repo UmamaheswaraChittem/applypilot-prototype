@@ -532,26 +532,28 @@ const ANSWER_MAP = [
   { match: /email/i,                                          value: () => EMAIL },
   { match: /phone|mobile|contact[\s_-]*no|telephone|cell/i,  value: () => PHONE },
   { match: /linkedin/i,                                       value: () => LINKEDIN_URL },
-  { match: /portfolio|website|personal[\s_-]*url|github|blog/i, value: () => LINKEDIN_URL },
+  { match: /portfolio|website|personal[\s_-]*url|github|blog/i, value: () => PROFILE.githubUrl || PROFILE.portfolioUrl || `https://github.com/${FIRST_NAME.toLowerCase()}-${LAST_NAME.toLowerCase()}` },
   // Location
-  { match: /city|location|where[\s_-]*are|address|region|state|country/i, value: () => `${CITY}, India` },
-  { match: /zip|postal|pin[\s_-]*code/i,                      value: () => '500081' },
+  { match: /\bcity\b|current[\s_-]*location|where[\s_-]*are|preferred[\s_-]*location/i, value: () => CITY },
+  { match: /address|region/i,                                  value: () => `${CITY}, India` },
+  { match: /zip|postal|pin[\s_-]*code/i,                      value: () => PROFILE.pincode || '500081' },
+  { match: /\bstate\b|province/i,                             value: () => PROFILE.state || 'Telangana' },
   // Compensation & notice
   { match: /expected[\s_-]*(ctc|salary|comp)|desired[\s_-]*(salary|comp|ctc)/i, value: () => `${EXPECTED_CTC} LPA` },
   { match: /current[\s_-]*(ctc|salary|comp)|present[\s_-]*(salary|ctc)/i,       value: () => `${CURRENT_CTC} LPA` },
   { match: /notice[\s_-]*(period|days|time)|serving[\s_-]*notice/i,             value: () => `${NOTICE_DAYS} days` },
-  // Experience
-  { match: /years?[\s_-]*(of[\s_-]*)?experience|experience[\s_-]*(in[\s_-]*)?years|total[\s_-]*experience/i, value: () => '8' },
-  { match: /relevant[\s_-]*experience/i,                       value: () => '8' },
-  // Employment
-  { match: /employer|current[\s_-]*company|organization|where[\s_-]*do[\s_-]*you[\s_-]*work/i, value: () => 'Self Employed' },
-  { match: /job[\s_-]*title|current[\s_-]*title|designation/i, value: () => 'Senior Software Engineer' },
+  // Experience — use actual profile data, not hardcoded
+  { match: /years?[\s_-]*(of[\s_-]*)?experience|experience[\s_-]*(in[\s_-]*)?years|total[\s_-]*experience/i, value: () => String(PROFILE.totalExperience) },
+  { match: /relevant[\s_-]*experience/i,                       value: () => String(PROFILE.totalExperience) },
+  // Employment — use actual profile data
+  { match: /employer|current[\s_-]*company|organization|where[\s_-]*do[\s_-]*you[\s_-]*work/i, value: () => PROFILE.currentCompany || 'Self Employed' },
+  { match: /job[\s_-]*title|current[\s_-]*title|designation/i, value: () => PROFILE.currentTitle || 'Software Engineer' },
   // Source
   { match: /source|how[\s_-]*did[\s_-]*you|hear[\s_-]*about|referr|where[\s_-]*did[\s_-]*you[\s_-]*find/i, value: () => 'LinkedIn' },
   // Salary catch-all
   { match: /salary|ctc|compensation|pay[\s_-]*expect/i,        value: () => `${EXPECTED_CTC} LPA` },
   // Cover / message
-  { match: /cover[\s_-]*letter|message|introduction|about[\s_-]*you|additional[\s_-]*info|why[\s_-]*(should|do[\s_-]*you)|tell[\s_-]*us/i, value: () => COVER },
+  { match: /cover[\s_-]*letter|message|introduction|about[\s_-]*you|additional[\s_-]*info|why[\s_-]*(should|do[\s_-]*you|are[\s_-]*you)|tell[\s_-]*us|what[\s_-]*excites|motivation/i, value: () => COVER },
 ];
 
 // Answers for select/radio fields based on context
@@ -560,8 +562,12 @@ const SELECT_ANSWER_MAP = [
   { match: /authoriz|eligible|right[\s_-]*to[\s_-]*work|legally[\s_-]*permitted|work[\s_-]*permit/i, prefer: /yes/i },
   { match: /notice|period/i,                   prefer: /30|one[\s_-]*month|less[\s_-]*than|immediately|1[\s_-]*month/i },
   { match: /source|hear|find|referral|how[\s_-]*did/i, prefer: /linkedin/i },
+  { match: /pronoun/i,                          prefer: /she[\s/]*her|they|prefer[\s_-]*not|use[\s_-]*name/i },
   { match: /gender/i,                          prefer: /prefer[\s_-]*not|decline|no[\s_-]*answer|rather[\s_-]*not/i },
-  { match: /race|ethnicity|veteran|disability/i, prefer: /prefer[\s_-]*not|decline|no[\s_-]*answer|rather[\s_-]*not/i },
+  { match: /race|ethnicity/i,                  prefer: /prefer[\s_-]*not|decline|no[\s_-]*answer|rather[\s_-]*not|choose/i },
+  { match: /veteran/i,                         prefer: /not[\s_-]*a[\s_-]*veteran|no|prefer[\s_-]*not|decline/i },
+  { match: /disability|disabilit/i,            prefer: /no[\s,]*i[\s_-]*don|prefer[\s_-]*not|decline|no/i },
+  { match: /demographic|survey|self[\s_-]*identify/i, prefer: /prefer[\s_-]*not|decline|no[\s_-]*answer|choose[\s_-]*not/i },
   { match: /privacy|acknowledge|consent|agree|terms|gdpr/i, prefer: /yes|agree|accept|consent|acknowledge/i },
   { match: /ai|machine[\s_-]*learning|familiarity/i, prefer: /expert|advanced|proficient|5|senior/i },
   { match: /proficiency|skill[\s_-]*level|expertise/i, prefer: /expert|advanced|proficient|senior/i },
@@ -571,6 +577,8 @@ const SELECT_ANSWER_MAP = [
   { match: /available|start[\s_-]*date|when[\s_-]*can/i, prefer: /immediately|30[\s_-]*days|1[\s_-]*month|asap/i },
   { match: /phone[\s_-]*device[\s_-]*type|phone[\s_-]*type|device[\s_-]*type/i, prefer: /mobile|cell/i },
   { match: /country[\s_-]*code|country[\s_-]*phone|phone[\s_-]*country/i, prefer: /india|\+91|91/i },
+  // Location / office — pick closest Indian city or remote
+  { match: /location|office|which[\s_-]*office|preferred[\s_-]*office/i, prefer: /hyderabad|india|bangalore|bengaluru|mumbai|remote|any|flexible/i },
   { match: /country|nationality/i, prefer: /india/i },
 ];
 
@@ -630,8 +638,16 @@ async function fillScannedFields(page, fields) {
           }
         }
         if (!matched) {
-          // Default: pick first non-empty option
-          await selectByText(el, /.+/, 1);
+          // Smart fallback: for survey/demographic-like fields, try "Prefer not" first
+          // For location fields, try India/Hyderabad first
+          const isSurvey = /survey|demographic|identify|optional/i.test(ctx);
+          const isLocation = /location|office|city|country/i.test(ctx);
+          if (isSurvey) {
+            matched = await selectByText(el, /prefer[\s_-]*not|decline|choose[\s_-]*not|no[\s_-]*answer/i);
+          } else if (isLocation) {
+            matched = await selectByText(el, /india|hyderabad|bangalore|remote/i);
+          }
+          if (!matched) await selectByText(el, /.+/, 1);
         }
         filledCount++;
         continue;

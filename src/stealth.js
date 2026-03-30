@@ -90,10 +90,28 @@ const STEALTH_SCRIPTS = [
     };
   }`,
 
-  // 6. Prevent iframe detection
-  `Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
-    get: function() { return window; }
-  });`,
+  // 6. Prevent iframe detection — but DON'T break cross-origin iframes
+  // (reCAPTCHA, hCaptcha, Turnstile use iframes and need real contentWindow)
+  // Only intercept when detection scripts try to check for automation via iframes
+  `(function() {
+    const origContentWindow = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
+    Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+      get: function() {
+        const win = origContentWindow.get.call(this);
+        // Only spoof for same-origin iframes used for detection (not cross-origin ones like CAPTCHA)
+        try {
+          // If we can access the iframe's document, it's same-origin — safe to spoof
+          if (win && win.document) {
+            // Patch the iframe's navigator.webdriver too
+            try { Object.defineProperty(win.navigator, 'webdriver', { get: () => false }); } catch {}
+          }
+        } catch {
+          // Cross-origin iframe — don't touch it (CAPTCHA, OAuth, etc.)
+        }
+        return win;
+      }
+    });
+  })();`,
 
   // 7. Fix toString for overridden functions
   `const nativeToString = Function.prototype.toString;
@@ -322,6 +340,48 @@ async function smartGoto(page, url, opts = {}) {
 
   // Then wait for the page to become stable (no more DOM mutations)
   await waitForPageStable(page, { maxWait: Math.min(maxWait, 15000), checkInterval, stableCount });
+
+  // Check for device verification / Cloudflare challenge pages and wait through them
+  await waitThroughVerification(page, { maxWait: Math.min(maxWait, 20000) });
+}
+
+/**
+ * Detect and wait through Cloudflare / device verification pages.
+ * These auto-resolve after a few seconds — we just need to wait.
+ */
+async function waitThroughVerification(page, opts = {}) {
+  const maxWait = opts.maxWait || 20000;
+  const start = Date.now();
+
+  while (Date.now() - start < maxWait) {
+    try {
+      const isChallenge = await page.evaluate(() => {
+        const text = (document.body?.innerText || '').toLowerCase();
+        const title = (document.title || '').toLowerCase();
+        // Cloudflare / device verification patterns
+        return /verifying (the |your )?device|just a moment|checking your browser|attention required|please wait/i.test(text)
+          || /cloudflare|challenge|ray id/i.test(text)
+          || /please wait|security check/i.test(title);
+      }).catch(() => false);
+
+      if (!isChallenge) return; // Page is real content now
+
+      // Still on verification page — wait and check for Turnstile iframe
+      const turnstile = await page.$('iframe[src*="challenges.cloudflare.com"], iframe[src*="turnstile"], [class*="cf-turnstile"]').catch(() => null);
+      if (turnstile) {
+        // Turnstile typically auto-solves. If it has a checkbox, click it.
+        try {
+          const frame = await turnstile.contentFrame().catch(() => null);
+          if (frame) {
+            const checkbox = await frame.$('input[type="checkbox"], [role="checkbox"]').catch(() => null);
+            if (checkbox) await checkbox.click().catch(() => {});
+          }
+        } catch {}
+      }
+    } catch {}
+
+    await new Promise(r => setTimeout(r, 1000));
+  }
 }
 
 /**
