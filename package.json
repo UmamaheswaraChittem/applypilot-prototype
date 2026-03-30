@@ -1,0 +1,25 @@
+{
+  "name": "applypilot-prototype",
+  "version": "1.0.0",
+  "description": "ApplyPilot AI — automated job scraper and scorer",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "scrape:linkedin": "node src/scrapers/linkedin.js",
+    "scrape:naukri": "node src/scrapers/naukri.js",
+    "score": "node src/scoring/scorer.js",
+    "apply": "node src/index.js apply",
+    "apply:linkedin": "node src/index.js apply:linkedin",
+    "apply:naukri": "node src/index.js apply:naukri",
+    "stats": "node src/index.js stats",
+    "install:browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "better-sqlite3": "^9.4.3",
+    "dotenv": "^16.4.5",
+    "playwright": "^1.42.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

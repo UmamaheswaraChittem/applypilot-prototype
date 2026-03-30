@@ -1,0 +1,42 @@
+{
+  "name": "example_user",
+  "enabled": false,
+  "linkedinEmail": "user@gmail.com",
+  "linkedinPassword": "password",
+  "naukriEmail": "",
+  "naukriPassword": "",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "+919876543210",
+  "city": "Hyderabad",
+  "country": "India",
+  "state": "Telangana",
+  "pincode": "500081",
+  "totalExperience": 3,
+  "expectedCtcLPA": 12,
+  "currentCtcLPA": 10,
+  "noticeDays": 30,
+  "skills": "Node.js,JavaScript,React",
+  "currentCompany": "Acme Corp",
+  "currentTitle": "Software Developer",
+  "degree": "Bachelor's",
+  "university": "",
+  "linkedinUrl": "",
+  "githubUrl": "",
+  "portfolioUrl": "",
+  "resumePath": "",
+  "coverLetter": "",
+  "experienceMap": {
+    "node": 3,
+    "react": 2,
+    "javascript": 3
+  },
+  "authorizedToWork": true,
+  "requiresSponsorship": false,
+  "willingToRelocate": true,
+  "searchQueries": [
+    "Node.js developer",
+    "JavaScript developer"
+  ],
+  "maxApplyPerRun": 30
+}

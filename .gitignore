@@ -1,0 +1,22 @@
+# Environment & secrets
+.env
+
+# Dependencies
+node_modules/
+
+# Session cookies
+cookies/
+
+# Database
+*.db
+
+# Debug output
+debug-screenshots/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
